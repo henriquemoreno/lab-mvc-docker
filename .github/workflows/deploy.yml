@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
@@ -12,21 +13,29 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          ssh-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Docker build
+      - name: Show Docker version
+        run: docker version
+
+      - name: Build Docker image
         run: docker build -t labmvc:latest .
 
-      - name: Stop and remove previous container (if exists)
+      - name: Stop and remove existing container (if exists)
         run: |
-          docker stop labmvc-test || echo "Container not running"
-          docker rm labmvc-test || echo "Container not found"
+          if (docker ps -a --format "{{.Names}}" | Select-String -Pattern "labmvc-test") {
+            Write-Host "Stopping existing container..."
+            docker stop labmvc-test
+            docker rm labmvc-test
+          } else {
+            Write-Host "Container labmvc-test not found"
+          }
 
-      - name: Run new container
+      - name: Run container
         run: |
           docker run -d `
             --name labmvc-test `
-            -p 127.0.0.1:8080:8080 `
-            -e ASPNETCORE_URLS=http://+:8080 `
+            -p 8080:8080 `
             labmvc:latest
+
+      - name: Show running containers
+        run: docker ps
