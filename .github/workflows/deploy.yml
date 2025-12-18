@@ -1,0 +1,31 @@
+name: CI/CD - MVC .NET 8 Docker (Lab)
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Docker build
+        run: |
+          docker build -t labmvc:latest .
+
+      - name: Stop and remove previous container (if exists)
+        run: |
+          docker stop labmvc-test || echo "Container not running"
+          docker rm labmvc-test || echo "Container not found"
+
+      - name: Run new container
+        run: |
+          docker run -d `
+            --name labmvc-test `
+            -p 127.0.0.1:8080:8080 `
+            -e ASPNETCORE_URLS=http://+:8080 `
+            labmvc:latest
